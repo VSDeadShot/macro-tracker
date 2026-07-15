@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model Meal {
+  id         String   @id @default(uuid())
+  user_id    String
+  image_url  String?
+  food_items String
+  protein    Float
+  carbs      Float
+  fats       Float
+  calories   Float
+  logged_at  DateTime @default(now())
+}
+
+model DailyTarget {
+  id              String @id @default(uuid())
+  user_id         String @unique
+  target_protein  Float  @default(150)
+  target_calories Float  @default(2500)
+  target_carbs    Float  @default(300)
+  target_fats     Float  @default(80)
+}
