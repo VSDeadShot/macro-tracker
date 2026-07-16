@@ -1,6 +1,44 @@
 import Link from "next/link";
+import prisma from "@/lib/prisma";
 
-export default function Home() {
+// Opt out of caching so the dashboard updates immediately when we redirect to it
+export const dynamic = 'force-dynamic';
+
+export default async function Home() {
+  // Fetch today's meals for our demo user
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const meals = await prisma.meal.findMany({
+    where: {
+      user_id: "demo-user",
+      logged_at: {
+        gte: startOfDay,
+      },
+    },
+    orderBy: {
+      logged_at: "desc",
+    },
+  });
+
+  // Calculate totals
+  const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
+  const totalProtein = meals.reduce((sum, meal) => sum + meal.protein, 0);
+  const totalCarbs = meals.reduce((sum, meal) => sum + meal.carbs, 0);
+  const totalFats = meals.reduce((sum, meal) => sum + meal.fats, 0);
+
+  // Hardcoded targets for now
+  const TARGET_CALORIES = 2000;
+  const TARGET_PROTEIN = 150;
+  const TARGET_CARBS = 200;
+  const TARGET_FATS = 70;
+
+  // Calculate progress percentages (capped at 100%)
+  const calPercent = Math.min(100, Math.round((totalCalories / TARGET_CALORIES) * 100));
+  const proPercent = Math.min(100, Math.round((totalProtein / TARGET_PROTEIN) * 100));
+  const carbPercent = Math.min(100, Math.round((totalCarbs / TARGET_CARBS) * 100));
+  const fatPercent = Math.min(100, Math.round((totalFats / TARGET_FATS) * 100));
+
   return (
     <div className="min-h-screen bg-background text-white pb-32">
       {/* Header */}
@@ -11,8 +49,11 @@ export default function Home() {
             Dashboard
           </h1>
         </div>
-        <div className="w-10 h-10 rounded-full bg-card border border-white/5 flex items-center justify-center text-white/50 shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div className="w-10 h-10 rounded-full bg-card border border-white/5 flex items-center justify-center text-white/50 shadow-sm overflow-hidden">
+          {/* Placeholder for User Profile */}
+          <div className="w-full h-full bg-primary/20 text-primary flex items-center justify-center font-bold">
+            V
+          </div>
         </div>
       </header>
 
@@ -21,36 +62,36 @@ export default function Home() {
         <section className="glass-panel p-6">
           <div className="flex justify-between items-baseline mb-6">
             <h2 className="font-semibold text-lg">Daily Targets</h2>
-            <span className="text-xs font-medium text-white/40">0 / 2,000 kcal</span>
+            <span className="text-xs font-medium text-white/40">{Math.round(totalCalories)} / {TARGET_CALORIES} kcal</span>
           </div>
           
           <div className="grid grid-cols-3 gap-5">
             <div className="flex flex-col gap-2.5">
               <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
-                <div className="h-full bg-primary w-[0%] rounded-full"></div>
+                <div className="h-full bg-primary rounded-full transition-all duration-1000 ease-out" style={{ width: `${proPercent}%` }}></div>
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-sm">0g</span>
+                <span className="font-semibold text-sm">{Math.round(totalProtein)}g</span>
                 <span className="text-xs text-white/40">Protein</span>
               </div>
             </div>
             
             <div className="flex flex-col gap-2.5">
               <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
-                <div className="h-full bg-secondary w-[0%] rounded-full"></div>
+                <div className="h-full bg-secondary rounded-full transition-all duration-1000 ease-out" style={{ width: `${carbPercent}%` }}></div>
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-sm">0g</span>
+                <span className="font-semibold text-sm">{Math.round(totalCarbs)}g</span>
                 <span className="text-xs text-white/40">Carbs</span>
               </div>
             </div>
             
             <div className="flex flex-col gap-2.5">
               <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
-                <div className="h-full bg-[#E5A93B] w-[0%] rounded-full"></div>
+                <div className="h-full bg-[#E5A93B] rounded-full transition-all duration-1000 ease-out" style={{ width: `${fatPercent}%` }}></div>
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-sm">0g</span>
+                <span className="font-semibold text-sm">{Math.round(totalFats)}g</span>
                 <span className="text-xs text-white/40">Fats</span>
               </div>
             </div>
@@ -60,13 +101,35 @@ export default function Home() {
         {/* Recent Meals */}
         <section>
           <h3 className="font-medium text-white/60 mb-4 px-1 text-sm">Today's Meals</h3>
-          <div className="glass-panel p-10 flex flex-col items-center justify-center text-center border border-dashed border-white/10 bg-transparent shadow-none">
-            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4 text-white/30">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+          
+          {meals.length === 0 ? (
+            <div className="glass-panel p-10 flex flex-col items-center justify-center text-center border border-dashed border-white/10 bg-transparent shadow-none">
+              <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4 text-white/30">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+              </div>
+              <p className="text-sm text-white/50 font-medium">No meals logged today</p>
+              <p className="text-xs text-white/30 mt-1">Tap below to scan your first meal.</p>
             </div>
-            <p className="text-sm text-white/50 font-medium">No meals logged today</p>
-            <p className="text-xs text-white/30 mt-1">Tap below to scan your first meal.</p>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {meals.map((meal) => (
+                <div key={meal.id} className="glass-panel p-4 flex justify-between items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div>
+                    <p className="font-medium text-white/90">{meal.food_items}</p>
+                    <div className="flex gap-3 text-xs text-white/40 mt-1 font-medium">
+                      <span className="text-primary">{Math.round(meal.protein)}g P</span>
+                      <span className="text-secondary">{Math.round(meal.carbs)}g C</span>
+                      <span className="text-[#E5A93B]">{Math.round(meal.fats)}g F</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold">{Math.round(meal.calories)}</p>
+                    <p className="text-[10px] text-white/30 uppercase tracking-wider">Kcal</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </main>
 

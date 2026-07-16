@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import CameraCapture from "@/components/CameraCapture";
 
 interface MacrosResult {
@@ -17,6 +18,8 @@ export default function LogMealPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MacrosResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   const handleImageCaptured = async (base64String: string) => {
     setImage(base64String);
@@ -48,6 +51,28 @@ export default function LogMealPage() {
       setError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveMeal = async () => {
+    if (!result) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/meals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(result),
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+      
+      // Redirect back to the dashboard to see the logged meal
+      router.push("/");
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to save meal to the database. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -98,8 +123,12 @@ export default function LogMealPage() {
               </div>
             </div>
 
-            <button className="w-full bg-primary hover:bg-primary/90 text-white py-4 px-4 rounded-xl font-medium transition-colors shadow-lg shadow-primary/20">
-              Save to Daily Log
+            <button 
+              onClick={handleSaveMeal}
+              disabled={saving}
+              className="w-full bg-primary hover:bg-primary/90 text-white py-4 px-4 rounded-xl font-medium transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+            >
+              {saving ? "Saving to database..." : "Save to Daily Log"}
             </button>
           </div>
         )}
