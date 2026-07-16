@@ -1,6 +1,7 @@
 import Link from "next/link";
 import prisma from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import MealCard from "@/components/MealCard";
 
 // Opt out of caching so the dashboard updates immediately when we redirect to it
 export const dynamic = 'force-dynamic';
@@ -31,11 +32,15 @@ export default async function Home() {
   const totalCarbs = meals.reduce((sum, meal) => sum + meal.carbs, 0);
   const totalFats = meals.reduce((sum, meal) => sum + meal.fats, 0);
 
-  // Hardcoded targets for now
-  const TARGET_CALORIES = 2000;
-  const TARGET_PROTEIN = 150;
-  const TARGET_CARBS = 200;
-  const TARGET_FATS = 70;
+  // Fetch user's custom targets (or use defaults)
+  let userTargets = await prisma.dailyTarget.findUnique({
+    where: { user_id: user!.id },
+  });
+
+  const TARGET_CALORIES = userTargets?.target_calories ?? 2000;
+  const TARGET_PROTEIN = userTargets?.target_protein ?? 150;
+  const TARGET_CARBS = userTargets?.target_carbs ?? 200;
+  const TARGET_FATS = userTargets?.target_fats ?? 70;
 
   // Calculate progress percentages (capped at 100%)
   const calPercent = Math.min(100, Math.round((totalCalories / TARGET_CALORIES) * 100));
@@ -53,11 +58,11 @@ export default async function Home() {
             Dashboard
           </h1>
         </div>
-        <div className="w-10 h-10 rounded-full bg-card border border-white/5 flex items-center justify-center text-white/50 shadow-sm overflow-hidden">
+        <Link href="/settings" className="w-10 h-10 rounded-full bg-card border border-white/5 flex items-center justify-center text-white/50 shadow-sm overflow-hidden hover:border-primary/30 transition-colors">
           <div className="w-full h-full bg-primary/20 text-primary flex items-center justify-center font-bold">
             {user?.user_metadata?.full_name?.[0] || user?.email?.[0]?.toUpperCase() || "U"}
           </div>
-        </div>
+        </Link>
       </header>
 
       <main className="px-6 space-y-8 max-w-md mx-auto">
@@ -114,22 +119,9 @@ export default async function Home() {
               <p className="text-xs text-white/30 mt-1">Tap below to scan your first meal.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {meals.map((meal) => (
-                <div key={meal.id} className="glass-panel p-4 flex justify-between items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div>
-                    <p className="font-medium text-white/90">{meal.food_items}</p>
-                    <div className="flex gap-3 text-xs text-white/40 mt-1 font-medium">
-                      <span className="text-primary">{Math.round(meal.protein)}g P</span>
-                      <span className="text-secondary">{Math.round(meal.carbs)}g C</span>
-                      <span className="text-[#E5A93B]">{Math.round(meal.fats)}g F</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold">{Math.round(meal.calories)}</p>
-                    <p className="text-[10px] text-white/30 uppercase tracking-wider">Kcal</p>
-                  </div>
-                </div>
+                <MealCard key={meal.id} meal={meal} />
               ))}
             </div>
           )}
