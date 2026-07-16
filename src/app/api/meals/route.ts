@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function POST(req: NextRequest) {
   try {
+    // Get the authenticated user
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { foodName, calories, protein, carbs, fats } = await req.json();
 
     if (!foodName) {
@@ -11,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     const meal = await prisma.meal.create({
       data: {
-        user_id: "demo-user", // We will update this when we add real Auth
+        user_id: user.id,
         food_items: foodName,
         calories,
         protein,

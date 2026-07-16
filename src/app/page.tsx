@@ -1,17 +1,21 @@
 import Link from "next/link";
 import prisma from "@/lib/prisma";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 // Opt out of caching so the dashboard updates immediately when we redirect to it
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  // Fetch today's meals for our demo user
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Fetch today's meals for the authenticated user
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
   const meals = await prisma.meal.findMany({
     where: {
-      user_id: "demo-user",
+      user_id: user!.id,
       logged_at: {
         gte: startOfDay,
       },
@@ -50,9 +54,8 @@ export default async function Home() {
           </h1>
         </div>
         <div className="w-10 h-10 rounded-full bg-card border border-white/5 flex items-center justify-center text-white/50 shadow-sm overflow-hidden">
-          {/* Placeholder for User Profile */}
           <div className="w-full h-full bg-primary/20 text-primary flex items-center justify-center font-bold">
-            V
+            {user?.user_metadata?.full_name?.[0] || user?.email?.[0]?.toUpperCase() || "U"}
           </div>
         </div>
       </header>
