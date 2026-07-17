@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
 Return ONLY a raw JSON object (do not use markdown blocks like \`\`\`json) with the following structure:
 {
   "foodName": "Name of the food (e.g. Grilled Chicken Salad)",
+  "ingredients": "Comma separated list of identified ingredients (e.g. Grilled Chicken Breast, Mixed Greens, Cherry Tomatoes)",
   "calories": 450,
   "protein": 30,
   "carbs": 15,
