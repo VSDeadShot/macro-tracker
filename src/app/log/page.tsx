@@ -238,24 +238,58 @@ export default function LogMealPage() {
 
         {result && (
           <div className="mt-8 p-6 glass-panel rounded-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 border border-primary/20 bg-primary/5">
-            <h2 className="text-2xl font-bold mb-1 text-white">{result.foodName}</h2>
-            <p className="text-sm text-white/50 mb-6 capitalize">Confidence: {result.confidence}</p>
+            <input 
+              type="text"
+              value={result.foodName}
+              onChange={(e) => setResult({...result, foodName: e.target.value})}
+              className="w-full text-2xl font-bold mb-1 text-white bg-transparent text-center focus:outline-none border-b border-transparent focus:border-white/20 transition-colors"
+            />
+            <p className="text-sm text-white/50 mb-6 capitalize text-center">Confidence: {result.confidence}</p>
             
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5">
-                <span className="text-3xl font-bold text-white mb-1">{result.calories}</span>
+              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/10 transition-colors">
+                <input 
+                  type="number" 
+                  value={result.calories} 
+                  onChange={(e) => setResult({...result, calories: Number(e.target.value)})}
+                  className="w-20 text-3xl font-bold text-white mb-1 bg-transparent text-center focus:outline-none border-b border-transparent focus:border-white/30 transition-colors" 
+                />
                 <span className="text-xs text-white/50 uppercase tracking-wider">Calories</span>
               </div>
-              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5">
-                <span className="text-3xl font-bold text-primary mb-1">{result.protein}g</span>
+              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/10 transition-colors">
+                <div className="flex items-baseline justify-center mb-1">
+                  <input 
+                    type="number" 
+                    value={result.protein} 
+                    onChange={(e) => setResult({...result, protein: Number(e.target.value)})}
+                    className="w-16 text-3xl font-bold text-primary bg-transparent text-center focus:outline-none border-b border-transparent focus:border-primary/40 transition-colors" 
+                  />
+                  <span className="text-xl font-bold text-primary ml-1">g</span>
+                </div>
                 <span className="text-xs text-white/50 uppercase tracking-wider">Protein</span>
               </div>
-              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5">
-                <span className="text-3xl font-bold text-secondary mb-1">{result.carbs}g</span>
+              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/10 transition-colors">
+                <div className="flex items-baseline justify-center mb-1">
+                  <input 
+                    type="number" 
+                    value={result.carbs} 
+                    onChange={(e) => setResult({...result, carbs: Number(e.target.value)})}
+                    className="w-16 text-3xl font-bold text-secondary bg-transparent text-center focus:outline-none border-b border-transparent focus:border-secondary/40 transition-colors" 
+                  />
+                  <span className="text-xl font-bold text-secondary ml-1">g</span>
+                </div>
                 <span className="text-xs text-white/50 uppercase tracking-wider">Carbs</span>
               </div>
-              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5">
-                <span className="text-3xl font-bold text-[#E5A93B] mb-1">{result.fats}g</span>
+              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/10 transition-colors">
+                <div className="flex items-baseline justify-center mb-1">
+                  <input 
+                    type="number" 
+                    value={result.fats} 
+                    onChange={(e) => setResult({...result, fats: Number(e.target.value)})}
+                    className="w-16 text-3xl font-bold text-[#E5A93B] bg-transparent text-center focus:outline-none border-b border-transparent focus:border-[#E5A93B]/40 transition-colors" 
+                  />
+                  <span className="text-xl font-bold text-[#E5A93B] ml-1">g</span>
+                </div>
                 <span className="text-xs text-white/50 uppercase tracking-wider">Fats</span>
               </div>
             </div>
