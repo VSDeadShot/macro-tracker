@@ -277,7 +277,7 @@ export default function LogMealPage() {
         {loading && (
           <div className="mt-8 p-6 glass-panel rounded-3xl flex flex-col items-center justify-center border border-secondary/30 bg-secondary/5 h-64">
             <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-white/80 font-medium">Analyzing food with Gemini AI...</p>
+            <p className="text-white/80 font-medium">Analyzing food...</p>
           </div>
         )}
 
