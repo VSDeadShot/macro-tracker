@@ -2,6 +2,7 @@ import Link from "next/link";
 import prisma from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import MealCard from "@/components/MealCard";
+import type { Meal } from "@prisma/client";
 
 // Opt out of caching so the dashboard updates immediately when we redirect to it
 export const dynamic = 'force-dynamic';
@@ -120,7 +121,7 @@ export default async function Home() {
             </div>
           ) : (
             <div className="space-y-3">
-              {meals.map((meal) => (
+              {meals.map((meal: Meal) => (
                 <MealCard key={meal.id} meal={meal} />
               ))}
             </div>
