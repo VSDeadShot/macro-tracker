@@ -1,8 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import CameraCapture from "@/components/CameraCapture";
+
+interface Template {
+  id: string;
+  name: string;
+  food_items: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+}
 
 interface MacrosResult {
   foodName: string;
@@ -19,7 +29,25 @@ export default function LogMealPage() {
   const [result, setResult] = useState<MacrosResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  
+  // Template state
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [showTemplateInput, setShowTemplateInput] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/templates")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setTemplates(data);
+        setLoadingTemplates(false);
+      })
+      .catch(() => setLoadingTemplates(false));
+  }, []);
 
   const handleImageCaptured = async (base64String: string) => {
     setImage(base64String);
@@ -76,6 +104,77 @@ export default function LogMealPage() {
     }
   };
 
+  const handleSaveTemplate = async () => {
+    if (!result || !templateName) return;
+    setSavingTemplate(true);
+    try {
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: templateName,
+          food_items: result.foodName,
+          calories: result.calories,
+          protein: result.protein,
+          carbs: result.carbs,
+          fats: result.fats,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save template");
+      
+      const newTemplate = await res.json();
+      setTemplates([newTemplate, ...templates]);
+      setShowTemplateInput(false);
+      setTemplateName("");
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to save template.");
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleQuickLog = async (template: Template) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/meals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          foodName: template.food_items,
+          calories: template.calories,
+          protein: template.protein,
+          carbs: template.carbs,
+          fats: template.fats,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to log from template");
+      router.push("/");
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to quick log meal.");
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      const res = await fetch("/api/templates", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setTemplates(templates.filter(t => t.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="min-h-screen p-6 flex flex-col items-center pt-12 bg-background">
       <div className="w-full max-w-md">
@@ -83,6 +182,44 @@ export default function LogMealPage() {
           <h1 className="text-3xl font-bold tracking-tight mb-3 text-white/95">Log Meal</h1>
           <p className="text-white/60 text-base">Snap a photo to let AI estimate the macros.</p>
         </header>
+
+        {!loadingTemplates && templates.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">Quick Log</h2>
+            <div className="space-y-3">
+              {templates.map((template) => (
+                <div key={template.id} className="glass-panel p-4 flex justify-between items-center group relative overflow-hidden">
+                  <div 
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => handleQuickLog(template)}
+                  >
+                    <p className="font-medium text-white/90 truncate">{template.name}</p>
+                    <div className="flex gap-3 text-xs text-white/40 mt-1 font-medium">
+                      <span className="text-primary">{Math.round(template.protein)}g P</span>
+                      <span className="text-secondary">{Math.round(template.carbs)}g C</span>
+                      <span className="text-[#E5A93B]">{Math.round(template.fats)}g F</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="text-right cursor-pointer" onClick={() => handleQuickLog(template)}>
+                      <p className="font-bold">{Math.round(template.calories)}</p>
+                      <p className="text-[10px] text-white/30 uppercase tracking-wider">Kcal</p>
+                    </div>
+                    
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(template.id); }}
+                      className="p-2 rounded-lg hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors"
+                      title="Delete template"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <CameraCapture onImageCaptured={handleImageCaptured} />
 
@@ -123,13 +260,53 @@ export default function LogMealPage() {
               </div>
             </div>
 
-            <button 
-              onClick={handleSaveMeal}
-              disabled={saving}
-              className="w-full bg-primary hover:bg-primary/90 text-white py-4 px-4 rounded-xl font-medium transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
-            >
-              {saving ? "Saving to database..." : "Save to Daily Log"}
-            </button>
+            <div className="space-y-3">
+              <button 
+                onClick={handleSaveMeal}
+                disabled={saving}
+                className="w-full bg-primary hover:bg-primary/90 text-white py-4 px-4 rounded-xl font-medium transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+              >
+                {saving ? "Saving to database..." : "Save to Daily Log"}
+              </button>
+              
+              {!showTemplateInput ? (
+                <button 
+                  onClick={() => {
+                    setTemplateName(result.foodName);
+                    setShowTemplateInput(true);
+                  }}
+                  className="w-full bg-secondary/10 hover:bg-secondary/20 text-secondary py-3 px-4 rounded-xl font-medium transition-colors border border-secondary/20"
+                >
+                  ⭐ Save as Template
+                </button>
+              ) : (
+                <div className="bg-secondary/5 border border-secondary/20 p-4 rounded-xl space-y-3">
+                  <p className="text-sm font-medium text-white/80">Save this meal for quick logging later.</p>
+                  <input 
+                    type="text" 
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="e.g. Morning Protein Shake"
+                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-secondary"
+                  />
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setShowTemplateInput(false)}
+                      className="flex-1 py-2 rounded-lg bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleSaveTemplate}
+                      disabled={savingTemplate || !templateName}
+                      className="flex-1 py-2 rounded-lg bg-secondary hover:bg-secondary/90 text-black text-sm font-medium disabled:opacity-50 transition-colors"
+                    >
+                      {savingTemplate ? "Saving..." : "Save Template"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
