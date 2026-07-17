@@ -2,7 +2,18 @@ import Link from "next/link";
 import prisma from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import MealCard from "@/components/MealCard";
-import type { Meal } from "@prisma/client";
+
+interface Meal {
+  id: string;
+  food_items: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  logged_at: Date;
+  user_id: string;
+  image_url: string | null;
+}
 
 // Opt out of caching so the dashboard updates immediately when we redirect to it
 export const dynamic = 'force-dynamic';
