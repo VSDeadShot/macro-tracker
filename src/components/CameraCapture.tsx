@@ -10,17 +10,41 @@ export default function CameraCapture({ onImageCaptured }: CameraCaptureProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_SIZE = 1024;
+        let { width, height } = img;
+
+        if (width > height && width > MAX_SIZE) {
+          height = (height / width) * MAX_SIZE;
+          width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+          width = (width / height) * MAX_SIZE;
+          height = MAX_SIZE;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+        URL.revokeObjectURL(img.src);
+        resolve(compressed);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setPreview(base64String);
-      onImageCaptured(base64String);
-    };
-    reader.readAsDataURL(file);
+    const base64String = await compressImage(file);
+    setPreview(base64String);
+    onImageCaptured(base64String);
   };
 
   return (
