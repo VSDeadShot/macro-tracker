@@ -27,10 +27,10 @@ export default async function Home() {
   });
 
   // Calculate totals
-  const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
-  const totalProtein = meals.reduce((sum, meal) => sum + meal.protein, 0);
-  const totalCarbs = meals.reduce((sum, meal) => sum + meal.carbs, 0);
-  const totalFats = meals.reduce((sum, meal) => sum + meal.fats, 0);
+  const totalCalories = meals.reduce((sum: number, meal: { calories: number }) => sum + meal.calories, 0);
+  const totalProtein = meals.reduce((sum: number, meal: { protein: number }) => sum + meal.protein, 0);
+  const totalCarbs = meals.reduce((sum: number, meal: { carbs: number }) => sum + meal.carbs, 0);
+  const totalFats = meals.reduce((sum: number, meal: { fats: number }) => sum + meal.fats, 0);
 
   // Fetch user's custom targets (or use defaults)
   let userTargets = await prisma.dailyTarget.findUnique({
