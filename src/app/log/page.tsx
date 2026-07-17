@@ -238,63 +238,66 @@ export default function LogMealPage() {
 
         {result && (
           <div className="mt-8 p-6 glass-panel rounded-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 border border-primary/20 bg-primary/5">
-            <div className="relative group flex items-center justify-center mb-1">
+            <div className="relative group flex items-center justify-center mb-1 max-w-[90%] mx-auto">
               <input 
                 type="text"
                 value={result.foodName}
                 onChange={(e) => setResult({...result, foodName: e.target.value})}
-                className="w-full text-2xl font-bold text-white bg-transparent text-center focus:outline-none border-b border-dashed border-white/20 focus:border-white/50 transition-colors py-1"
+                className="w-full text-2xl font-bold text-white bg-transparent text-center focus:outline-none border-b border-transparent focus:border-white/20 transition-colors py-1 pr-6"
               />
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute right-2 text-white/30 pointer-events-none group-hover:text-white/50"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute right-0 text-white/30 pointer-events-none group-hover:text-white/50"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
             </div>
             <p className="text-sm text-white/50 mb-4 capitalize text-center">Confidence: {result.confidence}</p>
-            <p className="text-xs text-primary/70 mb-4 text-center font-medium animate-pulse">Tap any number below to edit ✏️</p>
+            <p className="text-xs text-primary/70 mb-4 text-center font-medium animate-pulse flex items-center justify-center gap-1">
+              Tap any number below to edit
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+            </p>
             
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/10 transition-colors">
+              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/20 hover:bg-black/40 transition-colors group">
                 <input 
                   type="number" 
                   value={result.calories} 
                   onChange={(e) => setResult({...result, calories: Number(e.target.value)})}
-                  className="w-20 text-3xl font-bold text-white mb-1 bg-black/20 rounded-lg text-center focus:outline-none border border-white/10 focus:border-white/30 transition-colors py-1" 
+                  className="hide-arrows w-24 text-3xl font-bold text-white mb-1 bg-transparent text-center focus:outline-none border-b border-transparent focus:border-white/30 transition-colors py-1" 
                 />
-                <span className="text-xs text-white/50 uppercase tracking-wider mt-1">Calories</span>
+                <span className="text-xs text-white/50 uppercase tracking-wider mt-1 group-hover:text-white/70 transition-colors">Calories</span>
               </div>
-              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/10 transition-colors">
+              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/20 hover:bg-black/40 transition-colors group">
                 <div className="flex items-baseline justify-center mb-1">
                   <input 
                     type="number" 
                     value={result.protein} 
                     onChange={(e) => setResult({...result, protein: Number(e.target.value)})}
-                    className="w-16 text-3xl font-bold text-primary bg-black/20 rounded-lg text-center focus:outline-none border border-white/10 focus:border-primary/40 transition-colors py-1" 
+                    className="hide-arrows w-20 text-3xl font-bold text-primary bg-transparent text-center focus:outline-none border-b border-transparent focus:border-primary/40 transition-colors py-1" 
                   />
                   <span className="text-xl font-bold text-primary ml-1">g</span>
                 </div>
-                <span className="text-xs text-white/50 uppercase tracking-wider mt-1">Protein</span>
+                <span className="text-xs text-white/50 uppercase tracking-wider mt-1 group-hover:text-white/70 transition-colors">Protein</span>
               </div>
-              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/10 transition-colors">
+              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/20 hover:bg-black/40 transition-colors group">
                 <div className="flex items-baseline justify-center mb-1">
                   <input 
                     type="number" 
                     value={result.carbs} 
                     onChange={(e) => setResult({...result, carbs: Number(e.target.value)})}
-                    className="w-16 text-3xl font-bold text-secondary bg-black/20 rounded-lg text-center focus:outline-none border border-white/10 focus:border-secondary/40 transition-colors py-1" 
+                    className="hide-arrows w-20 text-3xl font-bold text-secondary bg-transparent text-center focus:outline-none border-b border-transparent focus:border-secondary/40 transition-colors py-1" 
                   />
                   <span className="text-xl font-bold text-secondary ml-1">g</span>
                 </div>
-                <span className="text-xs text-white/50 uppercase tracking-wider mt-1">Carbs</span>
+                <span className="text-xs text-white/50 uppercase tracking-wider mt-1 group-hover:text-white/70 transition-colors">Carbs</span>
               </div>
-              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/10 transition-colors">
+              <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center justify-center border border-white/5 hover:border-white/20 hover:bg-black/40 transition-colors group">
                 <div className="flex items-baseline justify-center mb-1">
                   <input 
                     type="number" 
                     value={result.fats} 
                     onChange={(e) => setResult({...result, fats: Number(e.target.value)})}
-                    className="w-16 text-3xl font-bold text-[#E5A93B] bg-black/20 rounded-lg text-center focus:outline-none border border-white/10 focus:border-[#E5A93B]/40 transition-colors py-1" 
+                    className="hide-arrows w-20 text-3xl font-bold text-[#E5A93B] bg-transparent text-center focus:outline-none border-b border-transparent focus:border-[#E5A93B]/40 transition-colors py-1" 
                   />
                   <span className="text-xl font-bold text-[#E5A93B] ml-1">g</span>
                 </div>
-                <span className="text-xs text-white/50 uppercase tracking-wider mt-1">Fats</span>
+                <span className="text-xs text-white/50 uppercase tracking-wider mt-1 group-hover:text-white/70 transition-colors">Fats</span>
               </div>
             </div>
 

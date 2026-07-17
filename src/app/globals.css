@@ -19,3 +19,13 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
 }
+
+.hide-arrows::-webkit-outer-spin-button,
+.hide-arrows::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.hide-arrows {
+  -moz-appearance: textfield;
+}
