@@ -302,18 +302,12 @@ export default function LogMealPage() {
                 className="w-full text-xl font-bold text-white bg-transparent focus:outline-none border-b border-transparent focus:border-white/20 transition-colors mb-4"
               />
               
-              <div className="flex gap-4">
-                <div className="w-[120px] h-[120px] rounded-2xl overflow-hidden relative bg-black/40 border border-white/5 shrink-0">
+              <div className="flex justify-center">
+                <div className="w-full max-w-[200px] aspect-square rounded-2xl overflow-hidden relative bg-black/40 border border-white/5 shadow-inner">
                   {image && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={image} alt="Food" className="w-full h-full object-cover" />
                   )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-white/90 mb-1.5">Identified Ingredients:</p>
-                  <p className="text-xs text-white/50 leading-relaxed">
-                    {result.ingredients || "Could not specifically identify ingredients."}
-                  </p>
                 </div>
               </div>
             </div>
