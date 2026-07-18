@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#1c1917",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -46,6 +47,8 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning className="min-h-full flex flex-col">
+        {/* Solid background mask to prevent scrolling content from showing under the translucent status bar */}
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-background" style={{ height: 'env(safe-area-inset-top, 0px)' }} />
         {children}
       </body>
     </html>
