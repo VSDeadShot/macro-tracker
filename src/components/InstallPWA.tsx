@@ -71,7 +71,7 @@ export default function InstallPWA() {
   if (!showInstall) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 fade-in duration-500">
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-10 fade-in duration-500">
       <button 
         onClick={handleInstallClick}
         className="bg-primary text-white font-semibold py-3 px-6 rounded-full shadow-lg shadow-primary/30 flex items-center gap-2 hover:bg-primary/90 transition-colors border border-white/10 whitespace-nowrap"
