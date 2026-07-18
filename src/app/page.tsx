@@ -2,6 +2,7 @@ import Link from "next/link";
 import prisma from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import MealCard from "@/components/MealCard";
+import InstallPWA from "@/components/InstallPWA";
 
 interface Meal {
   id: string;
@@ -70,11 +71,14 @@ export default async function Home() {
             Dashboard
           </h1>
         </div>
-        <Link href="/settings" className="w-10 h-10 rounded-full bg-card border border-white/5 flex items-center justify-center text-white/50 shadow-sm overflow-hidden hover:border-primary/30 transition-colors">
-          <div className="w-full h-full bg-primary/20 text-primary flex items-center justify-center font-bold">
-            {user?.user_metadata?.full_name?.[0] || user?.email?.[0]?.toUpperCase() || "U"}
-          </div>
-        </Link>
+        <div className="flex items-center">
+          <InstallPWA />
+          <Link href="/settings" className="w-10 h-10 rounded-full bg-card border border-white/5 flex items-center justify-center text-white/50 shadow-sm overflow-hidden hover:border-primary/30 transition-colors">
+            <div className="w-full h-full bg-primary/20 text-primary flex items-center justify-center font-bold">
+              {user?.user_metadata?.full_name?.[0] || user?.email?.[0]?.toUpperCase() || "U"}
+            </div>
+          </Link>
+        </div>
       </header>
 
       <main className="px-6 space-y-8 max-w-md mx-auto">
