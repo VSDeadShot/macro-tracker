@@ -38,8 +38,18 @@ export default function InstallPWA() {
 
     window.addEventListener("beforeinstallprompt", handler);
 
+    // Check if it already fired before React hydrated
+    const checkPrompt = setInterval(() => {
+      if ((window as any).__deferredPrompt) {
+        setDeferredPrompt((window as any).__deferredPrompt);
+        setShowInstall(true);
+        clearInterval(checkPrompt);
+      }
+    }, 500);
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      clearInterval(checkPrompt);
     };
   }, []);
 

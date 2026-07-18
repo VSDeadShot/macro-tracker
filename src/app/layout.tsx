@@ -28,6 +28,19 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.__deferredPrompt = null;
+              window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                window.__deferredPrompt = e;
+              });
+            `,
+          }}
+        />
+      </head>
       <body suppressHydrationWarning className="min-h-full flex flex-col">
         {children}
         <InstallPWA />
