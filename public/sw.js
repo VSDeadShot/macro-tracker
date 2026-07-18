@@ -1,8 +1,8 @@
-const CACHE_NAME = 'macro-tracker-v3';
+const CACHE_NAME = 'macro-tracker-v4';
 
 const STATIC_ASSETS = [
   '/',
-  '/manifest.json'
+  '/manifest.json?v=2'
 ];
 
 const API_ROUTES = [
