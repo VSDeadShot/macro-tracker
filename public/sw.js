@@ -1,7 +1,8 @@
-const CACHE_NAME = 'macro-tracker-v1';
+const CACHE_NAME = 'macro-tracker-v2';
 
 const STATIC_ASSETS = [
   '/',
+  '/manifest.json'
 ];
 
 const API_ROUTES = [
@@ -50,17 +51,18 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Stale-while-revalidate for everything else
-  // Note: Only caching GET requests
   if (event.request.method === 'GET') {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         const fetchPromise = fetch(event.request).then((networkResponse) => {
+          // Clone immediately before async cache open to prevent "already used" error
+          const clonedResponse = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
+            cache.put(event.request, clonedResponse);
           });
           return networkResponse;
         }).catch(() => {
-          // Fallback if offline and not cached
+          // Fallback if offline
         });
 
         return cachedResponse || fetchPromise;
