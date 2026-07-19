@@ -150,9 +150,9 @@ export default async function Home() {
   const fatPercent = Math.min(100, Math.round((totalFats / TARGET_FATS) * 100));
 
   return (
-    <div className="min-h-screen bg-background text-white pb-32">
+    <div className="min-h-screen bg-background text-white pb-32 md:pb-12">
       {/* Header */}
-      <header className="px-6 pt-12 pb-6 flex justify-between items-end max-w-md mx-auto">
+      <header className="px-6 pt-12 pb-6 flex justify-between items-end max-w-md md:max-w-5xl mx-auto">
         <div>
           <p className="text-primary font-medium text-sm mb-1 tracking-wide uppercase">Today</p>
           <h1 className="text-3xl font-bold tracking-tight text-white/95">
@@ -169,9 +169,11 @@ export default async function Home() {
         </div>
       </header>
 
-      <main className="px-6 space-y-8 max-w-md mx-auto">
-        {/* Streak Counter Card */}
-        <StreakCard streak={currentStreak} />
+      <main className="px-6 max-w-md md:max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        {/* Left Column */}
+        <div className="md:col-span-7 lg:col-span-8 space-y-8">
+          {/* Streak Counter Card */}
+          <StreakCard streak={currentStreak} />
 
         {/* Macros Summary Card */}
         <section className="glass-panel p-6">
@@ -215,6 +217,20 @@ export default async function Home() {
 
         {/* Weekly Protein Trend Chart */}
         <WeeklyProteinChart data={weeklyData} target={TARGET_PROTEIN} />
+        </div>
+
+        {/* Right Column */}
+        <div className="md:col-span-5 lg:col-span-4 flex flex-col gap-8">
+          {/* Desktop Scan Button */}
+          <div className="hidden md:block">
+            <Link 
+              href="/log" 
+              className="w-full bg-primary hover:bg-primary/90 text-white py-4 px-8 rounded-2xl text-lg font-medium transition-all duration-200 flex items-center justify-center gap-3 shadow-[0_8px_30px_rgba(201,112,74,0.25)]"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+              Scan a Meal
+            </Link>
+          </div>
 
         {/* Recent Meals */}
         <section>
@@ -236,10 +252,11 @@ export default async function Home() {
             </div>
           )}
         </section>
+        </div>
       </main>
 
-      {/* Floating Action Button area */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none">
+      {/* Floating Action Button area (Mobile Only) */}
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none md:hidden">
         <div className="max-w-md mx-auto pointer-events-auto">
           <Link 
             href="/log" 
