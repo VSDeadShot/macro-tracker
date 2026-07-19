@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import MealCard from "@/components/MealCard";
 import InstallPWA from "@/components/InstallPWA";
 import WeeklyProteinChart from "@/components/WeeklyProteinChart";
+import StreakCard from "@/components/StreakCard";
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { subDays, format } from 'date-fns';
 
@@ -87,6 +88,51 @@ export default async function Home() {
   // Convert map to array and sort chronologically just in case
   const weeklyData = Array.from(weeklyMap.values()).sort((a, b) => a.sortKey - b.sortKey);
 
+  // --- Streak Calculation ---
+  // Fetch ALL unique meal dates for the user to safely calculate their lifetime streak
+  const allMeals = await prisma.meal.findMany({
+    where: { user_id: user!.id },
+    select: { logged_at: true },
+    orderBy: { logged_at: "desc" },
+  });
+
+  const loggedDays = new Set<string>();
+  allMeals.forEach((meal: { logged_at: Date }) => {
+    const mealIst = toZonedTime(meal.logged_at, TIMEZONE);
+    loggedDays.add(format(mealIst, 'yyyy-MM-dd'));
+  });
+
+  let currentStreak = 0;
+  const todayStr = format(startOfTodayIst, 'yyyy-MM-dd');
+  const yesterdayStr = format(subDays(startOfTodayIst, 1), 'yyyy-MM-dd');
+  
+  let checkDate = startOfTodayIst;
+  
+  if (loggedDays.has(todayStr)) {
+    // Start counting from today
+    while (true) {
+      const checkStr = format(checkDate, 'yyyy-MM-dd');
+      if (loggedDays.has(checkStr)) {
+        currentStreak++;
+        checkDate = subDays(checkDate, 1);
+      } else {
+        break; // Stop immediately on first missing day
+      }
+    }
+  } else if (loggedDays.has(yesterdayStr)) {
+    // Start counting from yesterday
+    checkDate = subDays(startOfTodayIst, 1);
+    while (true) {
+      const checkStr = format(checkDate, 'yyyy-MM-dd');
+      if (loggedDays.has(checkStr)) {
+        currentStreak++;
+        checkDate = subDays(checkDate, 1);
+      } else {
+        break; // Stop immediately on first missing day
+      }
+    }
+  }
+
   // Fetch user's custom targets (or use defaults)
   let userTargets = await prisma.dailyTarget.findUnique({
     where: { user_id: user!.id },
@@ -124,6 +170,9 @@ export default async function Home() {
       </header>
 
       <main className="px-6 space-y-8 max-w-md mx-auto">
+        {/* Streak Counter Card */}
+        <StreakCard streak={currentStreak} />
+
         {/* Macros Summary Card */}
         <section className="glass-panel p-6">
           <div className="flex justify-between items-baseline mb-6">
