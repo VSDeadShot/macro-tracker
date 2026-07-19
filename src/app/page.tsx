@@ -3,6 +3,9 @@ import prisma from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import MealCard from "@/components/MealCard";
 import InstallPWA from "@/components/InstallPWA";
+import WeeklyProteinChart from "@/components/WeeklyProteinChart";
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { subDays, format } from 'date-fns';
 
 interface Meal {
   id: string;
@@ -23,27 +26,66 @@ export default async function Home() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch today's meals for the authenticated user
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  const TIMEZONE = 'Asia/Kolkata';
+  
+  // 1. Get current time in UTC
+  const nowUtc = new Date();
+  
+  // 2. Convert current time to IST
+  const nowIst = toZonedTime(nowUtc, TIMEZONE);
+  
+  // 3. Calculate start of today in IST
+  const startOfTodayIst = new Date(nowIst.getFullYear(), nowIst.getMonth(), nowIst.getDate());
+  
+  // 4. Calculate start of 6 days ago in IST (so we have 7 days total including today)
+  const startOf7DaysAgoIst = subDays(startOfTodayIst, 6);
+  
+  // 5. Convert that boundary back to UTC for the database query
+  const queryStartDateUtc = fromZonedTime(startOf7DaysAgoIst, TIMEZONE);
 
+  // Fetch all meals for the last 7 days
   const meals = await prisma.meal.findMany({
     where: {
       user_id: user!.id,
       logged_at: {
-        gte: startOfDay,
+        gte: queryStartDateUtc,
       },
     },
     orderBy: {
-      logged_at: "desc",
+      logged_at: "asc",
     },
   });
 
-  // Calculate totals
-  const totalCalories = meals.reduce((sum: number, meal: { calories: number }) => sum + meal.calories, 0);
-  const totalProtein = meals.reduce((sum: number, meal: { protein: number }) => sum + meal.protein, 0);
-  const totalCarbs = meals.reduce((sum: number, meal: { carbs: number }) => sum + meal.carbs, 0);
-  const totalFats = meals.reduce((sum: number, meal: { fats: number }) => sum + meal.fats, 0);
+  // Filter for TODAY's meals for the summary cards and meal list
+  const todayStartUtc = fromZonedTime(startOfTodayIst, TIMEZONE);
+  const todayMeals = meals.filter((meal: Meal) => meal.logged_at >= todayStartUtc);
+
+  // Calculate totals for TODAY
+  const totalCalories = todayMeals.reduce((sum: number, meal: Meal) => sum + meal.calories, 0);
+  const totalProtein = todayMeals.reduce((sum: number, meal: Meal) => sum + meal.protein, 0);
+  const totalCarbs = todayMeals.reduce((sum: number, meal: Meal) => sum + meal.carbs, 0);
+  const totalFats = todayMeals.reduce((sum: number, meal: Meal) => sum + meal.fats, 0);
+
+  // Build the 7-day chart data
+  const weeklyMap = new Map<string, { day: string; protein: number; sortKey: number }>();
+  for (let i = 6; i >= 0; i--) {
+    const day = subDays(startOfTodayIst, i);
+    const dayKey = format(day, 'EEE'); // e.g. "Mon"
+    weeklyMap.set(dayKey, { day: dayKey, protein: 0, sortKey: day.getTime() });
+  }
+
+  // Populate map with aggregated protein data
+  meals.forEach((meal: Meal) => {
+    const mealIst = toZonedTime(meal.logged_at, TIMEZONE);
+    const dayKey = format(mealIst, 'EEE');
+    if (weeklyMap.has(dayKey)) {
+      const existing = weeklyMap.get(dayKey)!;
+      existing.protein += meal.protein;
+    }
+  });
+
+  // Convert map to array and sort chronologically just in case
+  const weeklyData = Array.from(weeklyMap.values()).sort((a, b) => a.sortKey - b.sortKey);
 
   // Fetch user's custom targets (or use defaults)
   let userTargets = await prisma.dailyTarget.findUnique({
@@ -122,11 +164,14 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* Weekly Protein Trend Chart */}
+        <WeeklyProteinChart data={weeklyData} target={TARGET_PROTEIN} />
+
         {/* Recent Meals */}
         <section>
           <h3 className="font-medium text-white/60 mb-4 px-1 text-sm">Today's Meals</h3>
           
-          {meals.length === 0 ? (
+          {todayMeals.length === 0 ? (
             <div className="glass-panel p-10 flex flex-col items-center justify-center text-center border border-dashed border-white/10 bg-transparent shadow-none">
               <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4 text-white/30">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M2 12h20"/></svg>
@@ -136,7 +181,7 @@ export default async function Home() {
             </div>
           ) : (
             <div className="space-y-3">
-              {meals.map((meal: Meal) => (
+              {todayMeals.map((meal: Meal) => (
                 <MealCard key={meal.id} meal={meal} />
               ))}
             </div>
