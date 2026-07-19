@@ -33,7 +33,7 @@ export default function WeeklyProteinChart({ data, target }: { data: ChartData[]
               contentStyle={{ backgroundColor: '#2a2422', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
               itemStyle={{ color: '#fff', fontWeight: 'bold' }}
               labelStyle={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '4px' }}
-              formatter={(value: number) => [`${value}g`, 'Protein']}
+              formatter={(value: any) => [`${value}g`, 'Protein']}
             />
             <ReferenceLine y={target} stroke="rgba(255,255,255,0.3)" strokeDasharray="3 3" />
             <Bar dataKey="protein" radius={[4, 4, 0, 0]} maxBarSize={40}>
