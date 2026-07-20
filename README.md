@@ -7,6 +7,7 @@ An AI-powered, mobile-first web application that makes tracking your daily macro
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)
+![Recharts](https://img.shields.io/badge/Recharts-22B5BF?style=for-the-badge&logo=react&logoColor=white)
 
 ---
 
@@ -16,8 +17,11 @@ An AI-powered, mobile-first web application that makes tracking your daily macro
 - **✏️ Editable Estimates**: The AI provides a baseline, but you have full control to edit and tweak the macros before saving.
 - **⚡ Quick Log Templates**: Save your frequent meals (like your morning protein shake) as templates and log them instantly without needing to retake a photo or run the AI analysis.
 - **🧮 Smart Macro Calculator**: Uses the scientifically-backed Mifflin-St Jeor equation and evidence-based protein recommendations to automatically calculate your ideal daily targets based on your body stats and goals.
+- **🔥 Daily Streak Counter**: Timezone-accurate (IST) streak tracking that calculates consecutive days logged to keep you motivated.
+- **📊 Weekly Protein Trends**: A beautiful data visualization chart (built with Recharts) tracking your protein intake over the last 7 days against your custom daily targets.
+- **📱 PWA & Offline Support**: Fully installable as a Progressive Web App (PWA) on iOS and Android. Features a custom edge-to-edge UI on modern Android devices and an integrated Service Worker for aggressive caching and instant loading.
+- **🖥️ Responsive Desktop Layout**: While mobile-first, the dashboard smoothly transitions into a modern two-column grid layout on larger screens to maximize screen real estate.
 - **🔐 Secure Authentication**: Seamless Google OAuth integration via Supabase.
-- **📱 Mobile-First Design**: A premium, responsive UI featuring glassmorphism, dynamic animations, and mobile-optimized image compression.
 
 ---
 
@@ -29,6 +33,8 @@ An AI-powered, mobile-first web application that makes tracking your daily macro
 - **Database**: PostgreSQL (hosted on [Supabase](https://supabase.com/))
 - **ORM**: [Prisma](https://www.prisma.io/)
 - **AI Model**: Google Gemini (`gemini-1.5-pro`)
+- **Charts**: [Recharts](https://recharts.org/) (React charting library)
+- **Date Handling**: [date-fns](https://date-fns.org/) + date-fns-tz (IST timezone-aware calculations)
 
 ---
 
