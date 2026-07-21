@@ -32,7 +32,7 @@ An AI-powered, mobile-first web application that makes tracking your daily macro
 - **Styling**: Tailwind CSS (Custom premium dark theme)
 - **Database**: PostgreSQL (hosted on [Supabase](https://supabase.com/))
 - **ORM**: [Prisma](https://www.prisma.io/)
-- **AI Model**: Google Gemini (`gemini-1.5-pro`)
+- **AI Model**: Google Gemini (`gemini-3.1-flash-lite`)
 - **Charts**: [Recharts](https://recharts.org/) (React charting library)
 - **Date Handling**: [date-fns](https://date-fns.org/) + date-fns-tz (IST timezone-aware calculations)
 
