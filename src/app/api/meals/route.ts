@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { parseMealInput } from "@/lib/meal-input";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,20 +13,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { foodName, calories, protein, carbs, fats } = await req.json();
+    const parsed = parseMealInput(await req.json());
 
-    if (!foodName) {
-      return NextResponse.json({ error: "Missing meal data" }, { status: 400 });
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
     const meal = await prisma.meal.create({
       data: {
         user_id: user.id,
-        food_items: foodName,
-        calories,
-        protein,
-        carbs,
-        fats,
+        ...parsed.value,
       },
     });
 
