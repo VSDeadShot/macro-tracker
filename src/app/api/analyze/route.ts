@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 // Ensure the API key is available
 const apiKey = process.env.GEMINI_API_KEY;
@@ -7,9 +8,18 @@ const genAI = new GoogleGenerativeAI(apiKey || "");
 
 export async function POST(req: NextRequest) {
   try {
+    // Middleware skips /api, so this route must gate itself — otherwise anyone can spend the Gemini quota
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     if (!apiKey) {
+      console.error("Error analyzing image: GEMINI_API_KEY is not configured");
       return NextResponse.json(
-        { error: "GEMINI_API_KEY is not configured in your environment variables." },
+        { error: "Failed to analyze image" },
         { status: 500 }
       );
     }
@@ -71,10 +81,11 @@ Return ONLY a raw JSON object (do not use markdown blocks like \`\`\`json) with 
     const parsedMacros = JSON.parse(cleanedText);
 
     return NextResponse.json(parsedMacros);
-  } catch (error: any) {
+  } catch (error) {
+    // Full error stays in server logs only; Gemini/parser messages can expose quota and project details
     console.error("Error analyzing image:", error);
     return NextResponse.json(
-      { error: "Failed to analyze image", details: error.message },
+      { error: "Failed to analyze image" },
       { status: 500 }
     );
   }
