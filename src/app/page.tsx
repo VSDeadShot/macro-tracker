@@ -228,7 +228,7 @@ export default async function Home() {
               className="w-full bg-primary hover:bg-primary/90 text-white py-4 px-8 rounded-2xl text-lg font-medium transition-all duration-200 flex items-center justify-center gap-3 shadow-[0_8px_30px_rgba(201,112,74,0.25)]"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-              Scan a Meal
+              Log a Meal
             </Link>
           </div>
 
@@ -242,7 +242,7 @@ export default async function Home() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M2 12h20"/></svg>
               </div>
               <p className="text-sm text-white/50 font-medium">No meals logged today</p>
-              <p className="text-xs text-white/30 mt-1">Tap below to scan your first meal.</p>
+              <p className="text-xs text-white/30 mt-1">Tap below to log your first meal.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -263,7 +263,7 @@ export default async function Home() {
             className="w-full bg-primary hover:bg-primary/90 text-white py-4 px-8 rounded-2xl text-lg font-medium transition-all duration-200 flex items-center justify-center gap-3 shadow-[0_8px_30px_rgba(201,112,74,0.25)]"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-            Scan a Meal
+            Log a Meal
           </Link>
         </div>
       </div>

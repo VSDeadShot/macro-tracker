@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import CameraCapture from "@/components/CameraCapture";
+import { applyCalorieAutoFill, canSaveTemplate, GENERIC_SAVE_ERROR, macroInputChange, saveErrorMessage } from "@/lib/meal-form";
+import { MAX_CALORIES, MAX_MACRO_GRAMS } from "@/lib/meal-input";
 
 interface Template {
   id: string;
@@ -23,6 +25,8 @@ interface MacrosResult {
   fats: number;
   confidence: string;
 }
+
+type MacroField = "protein" | "carbs" | "fats" | "calories";
 
 interface DailyStats {
   calories: number;
@@ -48,6 +52,10 @@ export default function LogMealPage() {
   const [showTemplateInput, setShowTemplateInput] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Manual-entry number inputs: per-field draft text while focused, and whether calories were set by hand
+  const [drafts, setDrafts] = useState<Partial<Record<MacroField, string>>>({});
+  const [caloriesTouched, setCaloriesTouched] = useState(false);
 
   // Daily stats for progress bars
   const [stats, setStats] = useState<DailyStats | null>(null);
@@ -124,9 +132,53 @@ export default function LogMealPage() {
     }
   };
 
+  // Manual entry reuses the same review/edit step, just starting blank and without a photo
+  const handleStartManualEntry = () => {
+    setImage(null);
+    setError(null);
+    setDrafts({});
+    setCaloriesTouched(false);
+    setResult({ foodName: "", calories: 0, protein: 0, carbs: 0, fats: 0, confidence: "manual" });
+  };
+
+  // Protein/carbs/fats edits. In manual mode, calories follow 4P + 4C + 9F until the user sets calories.
+  const updateMacros = (patch: Partial<Pick<MacrosResult, "protein" | "carbs" | "fats">>) => {
+    if (!result) return;
+    setResult(applyCalorieAutoFill({ ...result, ...patch }, { manual: !image, caloriesTouched }));
+  };
+
+  const setCalories = (calories: number) => {
+    if (!result) return;
+    setCaloriesTouched(true);
+    setResult({ ...result, calories });
+  };
+
+  // While a number input is focused it shows a draft string (see macroInputChange)
+  const macroDraft = (field: MacroField) => drafts[field] ?? String(result?.[field] ?? 0);
+
+  const handleMacroInput = (field: MacroField, raw: string) => {
+    const max = field === "calories" ? MAX_CALORIES : MAX_MACRO_GRAMS;
+    const { draft, value } = macroInputChange(raw, macroDraft(field), max);
+    setDrafts({ ...drafts, [field]: draft });
+    if (field === "calories") {
+      setCalories(value);
+    } else {
+      updateMacros({ [field]: value });
+    }
+  };
+
+  const clearDraft = (field: MacroField) => {
+    setDrafts((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const handleSaveMeal = async () => {
     if (!result) return;
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/meals", {
         method: "POST",
@@ -134,27 +186,32 @@ export default function LogMealPage() {
         body: JSON.stringify(result),
       });
 
-      if (!res.ok) throw new Error("Failed to save");
-      
+      if (!res.ok) {
+        // A 400 explains what to fix (e.g. a macro out of range); anything else gets the generic message
+        const body = await res.json().catch(() => null);
+        setError(saveErrorMessage(res.status, body));
+        return;
+      }
+
       router.push("/");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError("Failed to save meal to the database. Please try again.");
+      setError(GENERIC_SAVE_ERROR);
     } finally {
       setSaving(false);
     }
   };
 
   const handleSaveTemplate = async () => {
-    if (!result || !templateName) return;
+    if (!result || !canSaveTemplate(templateName, result.foodName)) return;
     setSavingTemplate(true);
     try {
       const res = await fetch("/api/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: templateName,
-          food_items: result.foodName,
+          name: templateName.trim(),
+          food_items: result.foodName.trim(),
           calories: result.calories,
           protein: result.protein,
           carbs: result.carbs,
@@ -224,7 +281,7 @@ export default function LogMealPage() {
         {!result && (
           <header className="mb-10 text-center animate-in fade-in slide-in-from-top-4">
             <h1 className="text-3xl font-bold tracking-tight mb-3 text-white/95">Log Meal</h1>
-            <p className="text-white/60 text-base">Snap a photo to let AI estimate the macros.</p>
+            <p className="text-white/60 text-base">Snap a photo to let AI estimate the macros, or enter them yourself.</p>
           </header>
         )}
 
@@ -271,6 +328,13 @@ export default function LogMealPage() {
         {!result && !loading && (
           <div className="animate-in fade-in slide-in-from-bottom-4">
             <CameraCapture onImageCaptured={handleImageCaptured} />
+            {/* Always available — including after a failed photo analysis */}
+            <button
+              onClick={handleStartManualEntry}
+              className="w-full mt-4 py-4 px-4 rounded-xl font-medium bg-white/5 border border-white/5 hover:bg-white/10 transition-colors text-white/80"
+            >
+              ✏️ Enter manually
+            </button>
           </div>
         )}
 
@@ -281,12 +345,10 @@ export default function LogMealPage() {
           </div>
         )}
 
-        {error && (
+        {/* Errors before review (e.g. analysis failed); save errors render next to the Save button */}
+        {error && !result && (
           <div className="mt-8 p-6 glass-panel rounded-2xl border border-red-500/30 bg-red-500/5">
             <p className="text-red-400 font-medium text-center">{error}</p>
-            {result && (
-               <button onClick={() => setError(null)} className="mt-4 w-full py-2 bg-red-500/20 text-red-400 rounded-lg text-sm">Dismiss</button>
-            )}
           </div>
         )}
 
@@ -295,21 +357,24 @@ export default function LogMealPage() {
             
             {/* Top Card: Image + Ingredients */}
             <div className="glass-panel rounded-[2rem] p-5">
-              <input 
+              <input
                 type="text"
                 value={result.foodName}
                 onChange={(e) => setResult({...result, foodName: e.target.value})}
-                className="w-full text-xl font-bold text-white bg-transparent focus:outline-none border-b border-transparent focus:border-white/20 transition-colors mb-4"
+                placeholder="Meal name (e.g. Protein Shake)"
+                autoFocus={!image}
+                className={`w-full text-xl font-bold text-white bg-transparent focus:outline-none border-b transition-colors placeholder:text-white/30 ${image ? "border-transparent focus:border-white/20 mb-4" : "border-white/10 focus:border-white/30"}`}
               />
-              
-              <div className="flex justify-center">
-                <div className="w-full max-w-[200px] aspect-square rounded-2xl overflow-hidden relative bg-black/40 border border-white/5 shadow-inner">
-                  {image && (
-                    // eslint-disable-next-line @next/next/no-img-element
+
+              {/* Manual entries have no photo, so skip the image box entirely */}
+              {image && (
+                <div className="flex justify-center">
+                  <div className="w-full max-w-[200px] aspect-square rounded-2xl overflow-hidden relative bg-black/40 border border-white/5 shadow-inner">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={image} alt="Food" className="w-full h-full object-cover" />
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Macro Cards */}
@@ -354,41 +419,53 @@ export default function LogMealPage() {
               <div className="grid grid-cols-2 gap-x-6 gap-y-6">
                 {/* Protein Slider */}
                 <div>
-                  <p className="text-xs text-white/80 mb-2 font-medium">Protein: {result.protein}g</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <label htmlFor="macro-protein" className="text-xs text-white/80 font-medium">Protein (g)</label>
+                    <input id="macro-protein" type="number" inputMode="decimal" min="0" max={MAX_MACRO_GRAMS} step="any" value={macroDraft("protein")} onChange={(e) => handleMacroInput("protein", e.target.value)} onBlur={() => clearDraft("protein")} className="w-16 bg-black/40 border border-white/10 rounded-md px-2 py-1 text-xs text-right text-white focus:outline-none focus:border-white/30 hide-arrows" />
+                  </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setResult({...result, protein: Math.max(0, result.protein - 1)})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">-</button>
-                    <input type="range" min="0" max="150" value={result.protein} onChange={(e) => setResult({...result, protein: Number(e.target.value)})} className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-primary" />
-                    <button onClick={() => setResult({...result, protein: result.protein + 1})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">+</button>
+                    <button onClick={() => updateMacros({protein: Math.max(0, result.protein - 1)})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">-</button>
+                    <input type="range" min="0" max="150" value={result.protein} onChange={(e) => updateMacros({protein: Number(e.target.value)})} className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-primary" />
+                    <button onClick={() => updateMacros({protein: result.protein + 1})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">+</button>
                   </div>
                 </div>
 
                 {/* Carbs Slider */}
                 <div>
-                  <p className="text-xs text-white/80 mb-2 font-medium">Carbs: {result.carbs}g</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <label htmlFor="macro-carbs" className="text-xs text-white/80 font-medium">Carbs (g)</label>
+                    <input id="macro-carbs" type="number" inputMode="decimal" min="0" max={MAX_MACRO_GRAMS} step="any" value={macroDraft("carbs")} onChange={(e) => handleMacroInput("carbs", e.target.value)} onBlur={() => clearDraft("carbs")} className="w-16 bg-black/40 border border-white/10 rounded-md px-2 py-1 text-xs text-right text-white focus:outline-none focus:border-white/30 hide-arrows" />
+                  </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setResult({...result, carbs: Math.max(0, result.carbs - 1)})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">-</button>
-                    <input type="range" min="0" max="300" value={result.carbs} onChange={(e) => setResult({...result, carbs: Number(e.target.value)})} className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-secondary" />
-                    <button onClick={() => setResult({...result, carbs: result.carbs + 1})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">+</button>
+                    <button onClick={() => updateMacros({carbs: Math.max(0, result.carbs - 1)})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">-</button>
+                    <input type="range" min="0" max="300" value={result.carbs} onChange={(e) => updateMacros({carbs: Number(e.target.value)})} className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-secondary" />
+                    <button onClick={() => updateMacros({carbs: result.carbs + 1})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">+</button>
                   </div>
                 </div>
 
                 {/* Fats Slider */}
                 <div>
-                  <p className="text-xs text-white/80 mb-2 font-medium">Fats: {result.fats}g</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <label htmlFor="macro-fats" className="text-xs text-white/80 font-medium">Fats (g)</label>
+                    <input id="macro-fats" type="number" inputMode="decimal" min="0" max={MAX_MACRO_GRAMS} step="any" value={macroDraft("fats")} onChange={(e) => handleMacroInput("fats", e.target.value)} onBlur={() => clearDraft("fats")} className="w-16 bg-black/40 border border-white/10 rounded-md px-2 py-1 text-xs text-right text-white focus:outline-none focus:border-white/30 hide-arrows" />
+                  </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setResult({...result, fats: Math.max(0, result.fats - 1)})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">-</button>
-                    <input type="range" min="0" max="150" value={result.fats} onChange={(e) => setResult({...result, fats: Number(e.target.value)})} className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#E5A93B]" />
-                    <button onClick={() => setResult({...result, fats: result.fats + 1})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">+</button>
+                    <button onClick={() => updateMacros({fats: Math.max(0, result.fats - 1)})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">-</button>
+                    <input type="range" min="0" max="150" value={result.fats} onChange={(e) => updateMacros({fats: Number(e.target.value)})} className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#E5A93B]" />
+                    <button onClick={() => updateMacros({fats: result.fats + 1})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">+</button>
                   </div>
                 </div>
 
                 {/* Calories Slider */}
                 <div>
-                  <p className="text-xs text-white/80 mb-2 font-medium">Calories: {result.calories}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <label htmlFor="macro-calories" className="text-xs text-white/80 font-medium">Calories</label>
+                    <input id="macro-calories" type="number" inputMode="decimal" min="0" max={MAX_CALORIES} step="any" value={macroDraft("calories")} onChange={(e) => handleMacroInput("calories", e.target.value)} onBlur={() => clearDraft("calories")} className="w-16 bg-black/40 border border-white/10 rounded-md px-2 py-1 text-xs text-right text-white focus:outline-none focus:border-white/30 hide-arrows" />
+                  </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setResult({...result, calories: Math.max(0, result.calories - 10)})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">-</button>
-                    <input type="range" min="0" max="2000" step="10" value={result.calories} onChange={(e) => setResult({...result, calories: Number(e.target.value)})} className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white" />
-                    <button onClick={() => setResult({...result, calories: result.calories + 10})} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">+</button>
+                    <button onClick={() => setCalories(Math.max(0, result.calories - 10))} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">-</button>
+                    <input type="range" min="0" max="2000" step="10" value={result.calories} onChange={(e) => setCalories(Number(e.target.value))} className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white" />
+                    <button onClick={() => setCalories(result.calories + 10)} className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors">+</button>
                   </div>
                 </div>
               </div>
@@ -396,9 +473,16 @@ export default function LogMealPage() {
 
             {/* Action Buttons */}
             <div className="space-y-3 mt-6">
-              <button 
+              {error && (
+                <div className="p-4 rounded-2xl border border-red-500/30 bg-red-500/5">
+                  <p className="text-red-400 text-sm font-medium text-center">{error}</p>
+                  <button onClick={() => setError(null)} className="mt-3 w-full py-2 bg-red-500/20 text-red-400 rounded-lg text-sm">Dismiss</button>
+                </div>
+              )}
+
+              <button
                 onClick={handleSaveMeal}
-                disabled={saving}
+                disabled={saving || !result.foodName.trim()}
                 className="w-full bg-primary hover:bg-primary/90 text-white py-4 px-4 rounded-xl font-medium transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
               >
                 {saving ? "Saving to database..." : "Save to Daily Log"}
@@ -433,7 +517,7 @@ export default function LogMealPage() {
                     </button>
                     <button 
                       onClick={handleSaveTemplate}
-                      disabled={savingTemplate || !templateName}
+                      disabled={savingTemplate || !canSaveTemplate(templateName, result.foodName)}
                       className="flex-1 py-3 rounded-xl bg-secondary hover:bg-secondary/90 text-white text-sm font-medium disabled:opacity-50 transition-colors"
                     >
                       {savingTemplate ? "Saving..." : "Save Template"}
@@ -442,11 +526,17 @@ export default function LogMealPage() {
                 </div>
               )}
               
-              <button 
-                onClick={() => setResult(null)}
+              <button
+                onClick={() => {
+                  setResult(null);
+                  setImage(null);
+                  setError(null);
+                  setDrafts({});
+                  setCaloriesTouched(false);
+                }}
                 className="w-full py-4 text-white/40 hover:text-white/60 text-sm font-medium transition-colors"
               >
-                Discard & Retake Photo
+                {image ? "Discard & Retake Photo" : "Discard"}
               </button>
             </div>
           </div>

@@ -10,8 +10,8 @@ export type ParseResult = { ok: true; value: MealInput } | { ok: false; error: s
 
 const MAX_NAME_LENGTH = 200;
 // Sanity caps to catch typos (e.g. 45000 kcal), not nutritional limits
-const MAX_CALORIES = 10000;
-const MAX_MACRO_GRAMS = 1000;
+export const MAX_CALORIES = 10000;
+export const MAX_MACRO_GRAMS = 1000;
 
 // Accepts finite numbers or numeric strings (form inputs). Rejects "", null and booleans,
 // which Number() would otherwise silently turn into 0.
