@@ -11,14 +11,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [db, auth] = await Promise.all([readDatabase(), pingSupabaseAuth()]);
-
-  // The DB read is what matters; the auth ping is best-effort extra activity
-  if (db === "failed") {
-    return NextResponse.json({ ok: false, db, auth }, { status: 500 });
+  const secretKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!secretKey) {
+    console.error("Keep-alive misconfigured: SUPABASE_SERVICE_ROLE_KEY is not set");
+    return NextResponse.json({ ok: false, error: "Keep-alive misconfigured" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, db, auth });
+  const [db, rest] = await Promise.all([readDatabase(), readViaRestApi(secretKey)]);
+
+  // Both must succeed: the Prisma read goes through the pooler, which Supabase may not
+  // count as project activity, so the PostgREST read is the one that keeps it awake
+  if (db === "failed" || rest === "failed") {
+    return NextResponse.json({ ok: false, db, rest }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, db, rest });
 }
 
 async function readDatabase(): Promise<CheckResult> {
@@ -31,21 +38,24 @@ async function readDatabase(): Promise<CheckResult> {
   }
 }
 
-async function pingSupabaseAuth(): Promise<CheckResult> {
+async function readViaRestApi(secretKey: string): Promise<CheckResult> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/health`, {
-      headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
+    // New-style sb_secret_ keys go in the apikey header only (no Authorization: Bearer)
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/DailyTarget?select=id&limit=1`, {
+      headers: { apikey: secretKey },
       cache: "no-store",
       signal: AbortSignal.timeout(5000),
     });
 
     if (!res.ok) {
-      throw new Error(`Unexpected status ${res.status}`);
+      console.error(`Keep-alive PostgREST read failed: HTTP ${res.status}`);
+      return "failed";
     }
 
     return "ok";
   } catch (error) {
-    console.error("Keep-alive Supabase Auth ping failed:", error);
+    // Log only the error name, never the error itself, so the key or request headers can't end up in logs
+    console.error("Keep-alive PostgREST read failed:", error instanceof Error ? error.name : "unknown error");
     return "failed";
   }
 }

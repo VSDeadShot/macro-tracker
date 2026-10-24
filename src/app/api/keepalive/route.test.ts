@@ -9,7 +9,7 @@ import { GET } from "./route";
 // Fake placeholders only — never real values.
 const SECRET = "test-cron-secret";
 const SUPABASE_URL = "https://test-project.supabase.co";
-const ANON_KEY = "test-anon-key";
+const SECRET_KEY = "sb_secret_test-placeholder-key";
 
 const fetchMock = vi.fn();
 let consoleError: ReturnType<typeof vi.spyOn>;
@@ -19,13 +19,17 @@ function request(authorization?: string) {
   return new NextRequest("http://localhost/api/keepalive", { headers });
 }
 
+function loggedText() {
+  return consoleError.mock.calls.flat().map(String).join(" ");
+}
+
 beforeEach(() => {
   vi.stubEnv("CRON_SECRET", SECRET);
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", SUPABASE_URL);
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", ANON_KEY);
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", SECRET_KEY);
   vi.stubGlobal("fetch", fetchMock);
   count.mockResolvedValue(1);
-  fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+  fetchMock.mockResolvedValue(new Response('[{"id":"row-1"}]', { status: 200 }));
   consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -65,37 +69,67 @@ describe("GET /api/keepalive", () => {
     });
   });
 
+  describe("misconfigured", () => {
+    it.each([
+      ["missing", undefined],
+      ["empty", ""],
+      ["whitespace", "   "],
+    ])("returns 500 with a generic message when SUPABASE_SERVICE_ROLE_KEY is %s", async (_, value) => {
+      vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", value);
+
+      const res = await GET(request(`Bearer ${SECRET}`));
+
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ ok: false, error: "Keep-alive misconfigured" });
+      expect(count).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
   describe("authorized", () => {
-    it("reads the DB, pings Supabase Auth health, and reports both ok", async () => {
+    it("reads the DB and DailyTarget via PostgREST, and reports both ok", async () => {
       const res = await GET(request(`Bearer ${SECRET}`));
 
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true, db: "ok", auth: "ok" });
+      expect(await res.json()).toEqual({ ok: true, db: "ok", rest: "ok" });
       expect(count).toHaveBeenCalledTimes(1);
       expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("sends the secret key in the apikey header only, with no-store and a timeout", async () => {
+      await GET(request(`Bearer ${SECRET}`));
+
       const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toBe(`${SUPABASE_URL}/auth/v1/health`);
-      expect(init.headers).toMatchObject({ apikey: ANON_KEY });
+      expect(url).toBe(`${SUPABASE_URL}/rest/v1/DailyTarget?select=id&limit=1`);
+      expect(init.headers).toEqual({ apikey: SECRET_KEY });
+      expect(init.cache).toBe("no-store");
+      expect(init.signal).toBeInstanceOf(AbortSignal);
     });
 
-    it("still returns 200 when the auth ping throws, reporting auth failed", async () => {
-      fetchMock.mockRejectedValue(new Error("network down"));
+    it("returns 500 when the PostgREST read throws, without leaking the key", async () => {
+      fetchMock.mockRejectedValue(new Error(`request failed (apikey: ${SECRET_KEY})`));
 
       const res = await GET(request(`Bearer ${SECRET}`));
+      const body = await res.json();
 
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true, db: "ok", auth: "failed" });
+      expect(res.status).toBe(500);
+      expect(body).toEqual({ ok: false, db: "ok", rest: "failed" });
+      expect(JSON.stringify(body)).not.toContain(SECRET_KEY);
       expect(consoleError).toHaveBeenCalled();
+      expect(loggedText()).not.toContain(SECRET_KEY);
     });
 
-    it("still returns 200 when the auth ping gets a non-2xx, reporting auth failed", async () => {
-      fetchMock.mockResolvedValue(new Response("unavailable", { status: 503 }));
+    it("returns 500 when the PostgREST read gets a non-2xx, logging the status but not the key", async () => {
+      fetchMock.mockResolvedValue(new Response('{"code":"42501"}', { status: 403 }));
 
       const res = await GET(request(`Bearer ${SECRET}`));
+      const body = await res.json();
 
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true, db: "ok", auth: "failed" });
-      expect(consoleError).toHaveBeenCalled();
+      expect(res.status).toBe(500);
+      expect(body).toEqual({ ok: false, db: "ok", rest: "failed" });
+      expect(JSON.stringify(body)).not.toContain(SECRET_KEY);
+      expect(loggedText()).toContain("403");
+      expect(loggedText()).not.toContain(SECRET_KEY);
     });
 
     it("returns 500 without leaking error details when the DB read fails", async () => {
@@ -105,7 +139,7 @@ describe("GET /api/keepalive", () => {
       const body = await res.json();
 
       expect(res.status).toBe(500);
-      expect(body).toMatchObject({ ok: false, db: "failed" });
+      expect(body).toEqual({ ok: false, db: "failed", rest: "ok" });
       expect(JSON.stringify(body)).not.toContain("connection refused");
       expect(consoleError).toHaveBeenCalled();
     });
